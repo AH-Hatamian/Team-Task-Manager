@@ -1,0 +1,20 @@
+{% extends "tasks/base.html" %}
+
+{% block title %} {{ team.name }} — Tasks {% endblock %}
+
+{% block content %}
+    <h2> Tasks for {{ team.name }} </h2>
+    <a href="{% url 'tasks:team_detail' pk=team.pk %}">← Back to {{ team.name }}</a>
+    
+    {% if tasks %}
+    <ul>
+        {% for task in tasks %}
+            <li>
+                {{task.title}} — {{task.assignee}} — {{task.status}} — {{task.created_by}}
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>This team doesn't have any tasks yet</p>
+    {% endif %}
+{% endblock %}

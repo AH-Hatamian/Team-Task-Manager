@@ -1,0 +1,220 @@
+/* تنظیمات پایه - تغییر حالت ستونی به ردیفی از بالا به پایین */
+body {
+    font-family: -apple-system, "Segoe UI", Tahoma, sans-serif;
+    background-color: #f4f4f5;
+    color: #222;
+    display: block; /* این خط مشکل چیدمان عمودی را حل می‌کند */
+    max-width: 900px;
+    margin: 0 auto; /* وسط‌چین کردن کل صفحه */
+    padding: 40px 20px;
+    position: relative; /* برای شناور کردن دکمه خروج */
+}
+
+body > * {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 26px;
+    margin-bottom: 20px;
+    display: inline-block; /* برای قرار گرفتن کنار لینک‌های Add/Summary */
+    margin-right: 20px;
+}
+
+h2 {
+    font-size: 20px;
+    margin-top: 24px;
+}
+
+a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* لینک‌های ناوبری بالای صفحه (Add / Summary) */
+.top-links {
+    display: inline-flex; /* کنار h1 قرار می‌گیرد */
+    gap: 16px;
+    margin-bottom: 20px;
+    vertical-align: top;
+    margin-top: 5px;
+}
+
+/* ============================= */
+/* فرم فیلتر/جستجو - جعبه‌ی افقی بالای صفحه */
+/* ============================= */
+form[method="get"] {
+    background: #fff;
+    border-radius: 10px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+form[method="get"] input,
+form[method="get"] select {
+    width: auto;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+form[method="get"] label {
+    font-size: 13px;
+    color: #555;
+    margin-right: -6px;
+}
+
+form[method="get"] button {
+    margin-left: auto; /* هول دادن دکمه به سمت راست */
+}
+
+/* ============================= */
+/* فرم‌های معمولی (add/edit/signup) */
+/* ============================= */
+form:not([method="get"]):not([action*="logout"]) {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+    max-width: 420px;
+}
+
+form:not([method="get"]) p {
+    margin: 12px 0;
+}
+
+label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="password"],
+select,
+textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+/* دکمه‌ها */
+button, input[type="submit"] {
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+button:hover, input[type="submit"]:hover {
+    background-color: #1d4ed8;
+}
+
+/* ============================= */
+/* لیست هزینه‌ها - ردیف‌های کشیده و افقی */
+/* ============================= */
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: block; /* خروج از حالت فشرده و ستونی */
+}
+
+li {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    font-size: 15px;
+    box-sizing: border-box;
+}
+
+li .actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+li a {
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 5px;
+    background: #f3f4f6;
+    white-space: nowrap;
+    color: #222; /* رنگ متن تیره‌تر برای خوانایی دکمه Edit */
+}
+
+li a:hover {
+    text-decoration: none;
+    background: #e5e7eb;
+}
+
+li a[href*="delete"] {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+li a[href*="delete"]:hover {
+    background: #fecaca;
+}
+
+/* ============================= */
+/* Pagination - ته صفحه، وسط‌چین */
+/* ============================= */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    margin-top: 28px;
+    padding-top: 16px;
+    font-size: 14px;
+}
+
+/* ============================= */
+/* دکمه‌ی logout - بدون نیاز به تغییر HTML رفت بالا سمت راست */
+/* ============================= */
+form[action*="logout"] {
+    background: none;
+    box-shadow: none;
+    padding: 0;
+    position: absolute; /* جدا کردن از جریان عادی صفحه */
+    top: 40px;
+    right: 20px;
+    width: auto;
+}
+
+form[action*="logout"] button {
+    background: #6b7280;
+}
+
+form[action*="logout"] button:hover {
+    background: #4b5563;
+}

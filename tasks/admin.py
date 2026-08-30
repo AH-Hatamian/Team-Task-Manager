@@ -5,7 +5,6 @@ class MembershipInline(admin.TabularInline):
     model = Membership
     extra = 1
     
-
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
     list_display = ["name", "created_at", "member_count"]
@@ -32,7 +31,7 @@ class TaskAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("task", "author", "created_at")
-    list_filter = ("task__team",)
-    search_fields = ("body",)
+    list_display = ["task", "author", "created_at"]
+    list_filter = ["task__team",]
+    search_fields = ["body",]
 

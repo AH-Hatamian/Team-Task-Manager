@@ -1,0 +1,21 @@
+{% extends "tasks/base.html" %}
+
+{% block title %} My Teams {% endblock %}
+
+{% block content %}
+    <h2> My Teams </h2>
+    
+    {% if teams %}
+    <ul>
+        {% for team in teams %}
+            <li>
+                {{team.name}} — {{team.members.count}} member{{team.membera.count|pluralize}} —
+                {{team.tasks.count}} task{{team.tasks.count|pluralize}}
+                <a href="{% url 'tasks:team_detail' team.pk %}">Detail</a>
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>You're not a member of any team yet.</p>
+    {% endif %}
+{% endblock %}

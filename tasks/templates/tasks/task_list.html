@@ -5,12 +5,15 @@
 {% block content %}
     <h2> Tasks for {{ team.name }} </h2>
     <a href="{% url 'tasks:team_detail' pk=team.pk %}">← Back to {{ team.name }}</a>
+    <a href="{% url 'tasks:add_task' pk=team.pk %}"> Add new task {{ team.name }}</a>
     
     {% if tasks %}
     <ul>
         {% for task in tasks %}
             <li>
-                {{task.title}} — {{task.assignee}} — {{task.status}} — {{task.created_by}}
+                {{task.title}} — {{task.assignee}} — {{task.status}} — {{task.created_by}} — {{task.created_at}}
+                <a href="{% url 'tasks:edit_task' pk=task.pk %}"> Edit </a>
+                <a href="{% url 'tasks:delete_task' pk=task.pk %}"> Delete </a>
             </li>
         {% endfor %}
     </ul>

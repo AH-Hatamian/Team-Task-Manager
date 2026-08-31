@@ -1,6 +1,6 @@
 {% load static %}
-<!DOCKTYPE html>
-<html lang = "fa", dir = "rti">
+<!DOCTYPE html>
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         <title>{% block title %}Team Task Manager{% endblock %}</title>
@@ -9,11 +9,15 @@
 
     <body>
         <header>
-        {% if user.is_authenticated %}
-            Hi {{ user.username }} | <a href="{% url 'tasks:team_list' %}">My Teams</a> | <a href="{% url 'tasks:my_tasks' %}">My Tasks</a>
-        {% else %}
-            <a href="{% url 'login' %}">Log in</a>
-        {% endif %}
+            {% if user.is_authenticated %}
+                Hi {{ user.username }} |
+                <a href="{% url 'tasks:team_list' %}">My Teams</a> |
+                <a href="{% url 'tasks:my_tasks' %}">My Tasks</a>
+                <form action="{% url 'tasks:logout' %}" method="post" style="display: inline; float: right;">
+                    {% csrf_token %}
+                    <button type="submit">Log out</button>
+                </form>
+            {% endif %}
         </header>
 
         <main>

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Task, Team, USER_MODEL
+from .models import Task, Team, USER_MODEL, Comment
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -14,3 +14,9 @@ class TaskForm(forms.ModelForm):
 class LogInForm(forms.Form):
     username = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ["body"]
+        

@@ -1,9 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.views.generic import ListView, DeleteView, DetailView, UpdateView, CreateView
 from django.urls import reverse, reverse_lazy
-from .models import Membership, Task, Team
+from .models import Membership, Task, Team, Comment
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from .forms import TaskForm, LogInForm
+from .forms import TaskForm, LogInForm, CommentForm
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -38,12 +38,18 @@ class TaskListView(LoginRequiredMixin, ListView):
         team = self.get_team()
         return team.memberships.filter(user=self.request.user).exists()
 
+    def is_admin_or_owner(self):
+        team = self.get_team()
+        membership = team.memberships.filter(user=self.request.user).first()
+        return membership is not None and membership.role in (Membership.Role.OWNER, Membership.Role.ADMIN)
+
     def get_queryset(self):
         return Task.objects.filter(team=self.get_team()).select_related("assignee", "created_by")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["team"] = self.get_team()
+        context["allowed"] = self.is_admin_or_owner()
         return context
 
 class MyTasksView(LoginRequiredMixin, ListView):
@@ -54,31 +60,6 @@ class MyTasksView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return Task.objects.filter(assignee = self.request.user).distinct()
-
-class CreateTaskView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
-    model = Task
-    form_class = TaskForm
-    teamplate_name = "task_form.html"
-
-    def get_team(self):
-        return get_object_or_404(Team, pk=self.kwargs["pk"])
-
-    def test_func(self):
-        team = self.get_team()
-        return team.memberships.filter(user=self.request.user).exists()
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["team"] = self.get_team()
-        return kwargs
-
-    def form_valid(self, form):
-        form.instance.team = self.get_team()
-        form.instance.created_by = self.request.user
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse("tasks:task_list", kwargs={"pk": self.get_team().pk})
 
 class CreateTaskView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Task
@@ -156,3 +137,45 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect("tasks:login")
+
+class CommentListView(LoginRequiredMixin, UserPassesTestMixin, ListView):
+    model = Comment
+    template_name = "tasks/comment_list.html"
+    context_object_name = "comments"
+
+    def get_task(self):
+        return get_object_or_404(Task, pk=self.kwargs["pk"])
+
+    def test_func(self):
+        task = self.get_task()
+        return task.team.memberships.filter(user=self.request.user).exists()
+
+    def get_queryset(self):
+        return Comment.objects.filter(task=self.get_task()).select_related("author")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["task"] = self.get_task()
+        return context
+
+class CreateCommentView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = "tasks/add_comment.html"
+
+    def get_task(self):
+        return get_object_or_404(Task, pk=self.kwargs["pk"])
+
+    def test_func(self):
+        team = self.get_task().team
+        return team.memberships.filter(user=self.request.user).exists()
+
+    def form_valid(self, form):
+        form.instance.task = self.get_task()
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("tasks:comment_list", kwargs={"pk": self.object.task.pk})
+
+    

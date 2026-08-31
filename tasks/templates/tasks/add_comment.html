@@ -1,0 +1,13 @@
+{% extends "tasks/base.html" %}
+
+{% block title %}Create Task{% endblock %}
+
+{% block content %}
+    <h2>Leave Comment</h2>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+{% endblock %}

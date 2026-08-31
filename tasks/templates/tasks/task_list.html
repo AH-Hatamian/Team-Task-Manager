@@ -12,8 +12,11 @@
         {% for task in tasks %}
             <li>
                 {{task.title}} — {{task.assignee}} — {{task.status}} — {{task.created_by}} — {{task.created_at}}
-                <a href="{% url 'tasks:edit_task' pk=task.pk %}"> Edit </a>
-                <a href="{% url 'tasks:delete_task' pk=task.pk %}"> Delete </a>
+                {% if allowed %}
+                    <a href="{% url 'tasks:edit_task' pk=task.pk %}"> Edit </a>
+                    <a href="{% url 'tasks:delete_task' pk=task.pk %}"> Delete </a>
+                {% endif %}
+                <a href="{% url 'tasks:comment_list' pk=task.pk %}"> View Comments </a>
             </li>
         {% endfor %}
     </ul>

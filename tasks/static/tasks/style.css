@@ -1,105 +1,197 @@
-/* تنظیمات پایه - تغییر حالت ستونی به ردیفی از بالا به پایین */
+/* ============================= */
+/* تنظیمات پایه */
+/* ============================= */
 body {
     font-family: -apple-system, "Segoe UI", Tahoma, sans-serif;
-    background-color: #f4f4f5;
-    color: #222;
-    display: block; /* این خط مشکل چیدمان عمودی را حل می‌کند */
+    background-color: #f8fafc; 
+    color: #334155;
+    display: block; 
     max-width: 900px;
-    margin: 0 auto; /* وسط‌چین کردن کل صفحه */
+    margin: 0 auto; 
     padding: 40px 20px;
-    position: relative; /* برای شناور کردن دکمه خروج */
+    line-height: 1.6;
 }
 
 body > * {
-    width: 100%;
     box-sizing: border-box;
 }
 
 h1 {
-    font-size: 26px;
+    font-size: 24px;
     margin-bottom: 20px;
-    display: inline-block; /* برای قرار گرفتن کنار لینک‌های Add/Summary */
-    margin-right: 20px;
+    display: block; 
+    color: #0f172a;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+    margin-top: 10px;
 }
 
 h2 {
-    font-size: 20px;
+    font-size: 22px;
     margin-top: 24px;
+    text-align: center !important; 
+    color: #0f172a;
 }
 
 a {
-    color: #2563eb;
     text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-/* لینک‌های ناوبری بالای صفحه (Add / Summary) */
-.top-links {
-    display: inline-flex; /* کنار h1 قرار می‌گیرد */
-    gap: 16px;
-    margin-bottom: 20px;
-    vertical-align: top;
-    margin-top: 5px;
+    transition: all 0.2s ease-in-out; 
 }
 
 /* ============================= */
-/* فرم فیلتر/جستجو - جعبه‌ی افقی بالای صفحه */
+/* کادر ناوبری بالای صفحه (Navbar) */
+/* ============================= */
+.top-navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 35px;
+    border: 1px solid #e2e8f0;
+}
+
+.top-navbar .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.top-navbar .greeting {
+    font-weight: bold;
+    color: #0f172a;
+    border-right: 2px solid #cbd5e1;
+    padding-right: 15px;
+}
+
+.top-navbar a {
+    background-color: #f1f5f9;
+    color: #475569 !important;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.top-navbar a:hover {
+    background-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+.top-navbar form {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    width: auto !important;
+}
+
+.top-navbar form button {
+    background-color: #ef4444 !important;
+    margin: 0 !important;
+    padding: 8px 16px !important;
+    width: auto !important;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}
+
+.top-navbar form button:hover {
+    background-color: #dc2626 !important;
+}
+
+/* ============================= */
+/* دکمه‌های عملیاتی (بیرون از لیست‌ها) */
+/* ============================= */
+/* دکمه‌های انجام کار (مثل Add task) -> آبی */
+a:not(li a):not(.top-navbar a) {
+    display: inline-block;
+    background-color: #2563eb !important; 
+    color: #ffffff !important;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 4px 4px 15px 0;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+a:not(li a):not(.top-navbar a):hover {
+    background-color: #1d4ed8 !important;
+    transform: translateY(-1px);
+}
+
+/* دکمه‌های بازگشت و کامنت -> خاکستری تیره */
+a[href*="team_detail"]:not(li a):not(.top-navbar a),
+a[href$="tasks/"]:not(li a):not(.top-navbar a),
+a[href*="comment"]:not(li a):not(.top-navbar a) {
+    background-color: #64748b !important;
+    box-shadow: none;
+}
+
+a[href*="team_detail"]:not(li a):not(.top-navbar a):hover,
+a[href$="tasks/"]:not(li a):not(.top-navbar a):hover,
+a[href*="comment"]:not(li a):not(.top-navbar a):hover {
+    background-color: #475569 !important;
+}
+
+/* ============================= */
+/* فرم‌های جستجو و فیلتر */
 /* ============================= */
 form[method="get"] {
-    background: #fff;
+    background: #ffffff;
     border-radius: 10px;
     padding: 16px 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     margin-bottom: 24px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 12px;
+    border: 1px solid #e2e8f0;
 }
 
 form[method="get"] input,
 form[method="get"] select {
     width: auto;
-    padding: 7px 10px;
-    border: 1px solid #d1d5db;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 14px;
 }
 
-form[method="get"] label {
-    font-size: 13px;
-    color: #555;
-    margin-right: -6px;
-}
-
 form[method="get"] button {
-    margin-left: auto; /* هول دادن دکمه به سمت راست */
+    margin-left: auto; 
+    width: auto !important;
+    margin-top: 0 !important;
 }
 
 /* ============================= */
-/* فرم‌های معمولی (add/edit/signup) */
+/* فرم‌های اصلی (Login, Create) */
 /* ============================= */
 form:not([method="get"]):not([action*="logout"]) {
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-    margin-bottom: 20px;
-    max-width: 420px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    display: block !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    margin: 40px auto !important;
+    border: 1px solid #e2e8f0;
 }
 
 form:not([method="get"]) p {
-    margin: 12px 0;
+    margin: 15px 0;
 }
 
 label {
     font-weight: 600;
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-size: 14px;
+    color: #334155;
 }
 
 input[type="text"],
@@ -109,23 +201,32 @@ input[type="password"],
 select,
 textarea {
     width: 100%;
-    padding: 8px 10px;
-    border: 1px solid #d1d5db;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
     border-radius: 6px;
     font-size: 15px;
     box-sizing: border-box;
+    transition: border 0.2s, box-shadow 0.2s;
 }
 
-/* دکمه‌ها */
+input:focus, select:focus, textarea:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
 button, input[type="submit"] {
     background-color: #2563eb;
     color: #fff;
     border: none;
-    padding: 9px 18px;
+    padding: 12px 18px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    white-space: nowrap;
+    transition: all 0.2s ease;
+    width: 100%; 
+    margin-top: 15px;
 }
 
 button:hover, input[type="submit"]:hover {
@@ -133,27 +234,34 @@ button:hover, input[type="submit"]:hover {
 }
 
 /* ============================= */
-/* لیست هزینه‌ها - ردیف‌های کشیده و افقی */
+/* لیست‌ها (تسک‌ها، تیم‌ها، کامنت‌ها) */
 /* ============================= */
 ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: block; /* خروج از حالت فشرده و ستونی */
+    display: block; 
 }
 
 li {
-    background: #fff;
+    background: #ffffff;
     border-radius: 8px;
     padding: 16px 20px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
     font-size: 15px;
-    box-sizing: border-box;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #cbd5e1; 
+    transition: all 0.2s;
+}
+
+li:hover {
+    border-left-color: #2563eb; 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 li .actions {
@@ -162,31 +270,42 @@ li .actions {
     flex-shrink: 0;
 }
 
+/* دکمه‌های خنثی داخل لیست */
 li a {
     font-size: 13px;
-    padding: 5px 12px;
-    border-radius: 5px;
-    background: #f3f4f6;
-    white-space: nowrap;
-    color: #222; /* رنگ متن تیره‌تر برای خوانایی دکمه Edit */
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569 !important; 
+    font-weight: 500;
 }
 
 li a:hover {
-    text-decoration: none;
-    background: #e5e7eb;
+    background: #e2e8f0;
 }
 
+/* دکمه Delete داخل لیست */
 li a[href*="delete"] {
-    background: #fee2e2;
-    color: #dc2626;
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
 }
 
 li a[href*="delete"]:hover {
-    background: #fecaca;
+    background: #fee2e2 !important;
+}
+
+/* دکمه Edit داخل لیست */
+li a[href*="edit"] {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+}
+
+li a[href*="edit"]:hover {
+    background: #dbeafe !important;
 }
 
 /* ============================= */
-/* Pagination - ته صفحه، وسط‌چین */
+/* Pagination */
 /* ============================= */
 .pagination {
     display: flex;
@@ -196,25 +315,4 @@ li a[href*="delete"]:hover {
     margin-top: 28px;
     padding-top: 16px;
     font-size: 14px;
-}
-
-/* ============================= */
-/* دکمه‌ی logout - بدون نیاز به تغییر HTML رفت بالا سمت راست */
-/* ============================= */
-form[action*="logout"] {
-    background: none;
-    box-shadow: none;
-    padding: 0;
-    position: absolute; /* جدا کردن از جریان عادی صفحه */
-    top: 40px;
-    right: 20px;
-    width: auto;
-}
-
-form[action*="logout"] button {
-    background: #6b7280;
-}
-
-form[action*="logout"] button:hover {
-    background: #4b5563;
 }

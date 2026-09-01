@@ -5,12 +5,12 @@
 {% block content %}
     <h2>{{ team.name }}</h2>
     <p>{{ team.description }}</p>
-    <p>Created at: {{ team.created_at }}</p>
+    <p>Created at: {{ team.created_at|date:"M d, Y" }}</p>
 
     <h3>Members</h3>
     <ul>
         {% for membership in team.memberships.all %}
-            <li>{{ membership.user }} — {{ membership.role }}</li>
+            <li>{{ membership.user }} &nbsp; ({{ membership.role|capfirst }})</li>
         {% endfor %}
     </ul>
 

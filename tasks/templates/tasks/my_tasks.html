@@ -9,7 +9,7 @@
     <ul>
         {% for task in tasks %}
             <li>
-                {{task.title}} — {{task.team.name}} — {{task.status}} — {{task.created_by}} — {{task.created_at}}
+                {{task.title}} — {{task.team.name}} — {{task.get_status_display}} — {{task.created_by}} — {{task.created_at|date:"M d, Y"}}
             </li>
         {% endfor %}
     </ul>

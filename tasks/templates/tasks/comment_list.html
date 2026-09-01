@@ -4,8 +4,8 @@
 
 {% block content %}
     <h2> Comments for {{task.title}} </h2>
-    <a href = "{% url 'tasks:task_list' pk=task.team.pk %}"> Back to tasks </a>
-    <a href="{% url 'tasks:add_comment' pk=task.pk%}"> Leave comment </a>
+    <a href = "{% url 'tasks:task_list' pk=task.team.pk %}"> &larr; Back to Task </a> | 
+    <a href="{% url 'tasks:add_comment' pk=task.pk%}"> Add comment </a>
     {% if comments %}
     <ul>
         {% for comment in comments %}

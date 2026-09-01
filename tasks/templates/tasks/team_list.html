@@ -9,7 +9,7 @@
     <ul>
         {% for team in teams %}
             <li>
-                {{team.name}} — {{team.members.count}} member{{team.membera.count|pluralize}} —
+                {{team.name}} — {{team.members.count}} member{{team.members.count|pluralize}} —
                 {{team.tasks.count}} task{{team.tasks.count|pluralize}}
                 <a href="{% url 'tasks:team_detail' team.pk %}">Detail</a>
             </li>

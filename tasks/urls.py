@@ -1,5 +1,6 @@
 from django.urls import path
-from . import views 
+from . import views
+
 
 app_name = "tasks"
 
@@ -14,5 +15,5 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("<int:pk>/comments/", views.CommentListView.as_view(), name="comment_list"),
-    path("<int:pk>/comments/add_comment", views.CreateCommentView.as_view(), name="add_comment")
+    path("<int:pk>/comments/add_comment", views.CreateCommentView.as_view(), name="add_comment"),
 ]

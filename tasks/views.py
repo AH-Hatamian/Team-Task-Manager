@@ -71,7 +71,9 @@ class CreateTaskView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
 
     def test_func(self):
         team = self.get_team()
-        return team.memberships.filter(user=self.request.user).exists()
+        membership = team.memberships.filter(user=self.request.user).first()
+        return membership is not None and membership.role in (Membership.Role.OWNER, Membership.Role.ADMIN)
+
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -177,5 +179,130 @@ class CreateCommentView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse("tasks:comment_list", kwargs={"pk": self.object.task.pk})
+
+
+from rest_framework import generics, permissions
+from .models import Team, Task
+from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer
+from .permissions import TeamPermission, TaskPermission, MembershipPermission, CommentPermission
+
+class TeamListCreateView(generics.ListCreateAPIView):
+    serializer_class = TeamSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Team.objects.filter(members = self.request.user)
+
+    def perform_create(self, serializer):
+        team = serializer.save()
+        Membership.objects.create(
+            team=team,
+            user=self.request.user,
+            role=Membership.Role.OWNER
+        )
+
+class TeamTaskListCreateView(generics.ListCreateAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        team_id = self.kwargs["pk"]
+        return Task.objects.filter(team_id = team_id, team__members = self.request.user)
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["pk"]
+        team = Team.objects.get(pk=team_id)
+        serializer.save(team=team, created_by=self.request.user)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        team_id = self.kwargs["pk"]
+        context["team"] = Team.objects.get(pk=team_id)
+        return context
+    
+
+class TeamDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TeamSerializer
+    permission_classes = [permissions.IsAuthenticated, TeamPermission]
+
+    def get_queryset(self):
+        return Team.objects.filter(members = self.request.user)
+
+
+class TaskListCreateView(generics.ListAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Task.objects.filter(assignee=self.request.user)
+
+    
+
+    # def perform_create(self, serializer):
+    #     team_id = self.kwargs["pk"]
+    #     team = Team.objects.get(pk=team_id)
+    #     serializer.save(team=team, created_by=self.request.user)
+
+
+class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TaskSerializer
+    permission_classes = [permissions.IsAuthenticated, TaskPermission]
+
+    def get_queryset(self):
+        return Task.objects.filter(
+            team__memberships__user=self.request.user
+        )
+
+class MembershipListCreateView(generics.ListCreateAPIView):
+    serializer_class = MembershipSerializer
+    permission_classes = [permissions.IsAuthenticated, MembershipPermission]
+
+    def get_queryset(self):
+        team_id = self.kwargs["pk"]
+        return Membership.objects.filter(
+            team_id=team_id,
+            team__memberships__user=self.request.user
+        )
+
+    def perform_create(self, serializer):
+        team_id = self.kwargs["pk"]
+        team = Team.objects.get(pk=team_id)
+        serializer.save(team=team)
+
+
+class MembershipDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = MembershipSerializer
+    permission_classes = [permissions.IsAuthenticated, MembershipPermission]
+
+    def get_queryset(self):
+        return Membership.objects.filter(
+            team__memberships__user=self.request.user
+        )
+
+class CommentListCreateView(generics.ListCreateAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        task_id = self.kwargs["pk"]
+        return Comment.objects.filter(
+            task_id=task_id,
+            task__team__memberships__user=self.request.user
+        )
+
+    def perform_create(self, serializer):
+        task_id = self.kwargs["pk"]
+        task = Task.objects.get(pk = task_id)
+        serializer.save(task = task, author=self.request.user)
+
+
+class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [permissions.IsAuthenticated, CommentPermission]
+
+    def get_queryset(self):
+        return Comment.objects.filter(
+            task__team__memberships__user=self.request.user
+        )
 
     

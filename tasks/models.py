@@ -35,7 +35,7 @@ class Membership(models.Model):
 
 class Task(models.Model):
     class Status(models.TextChoices):
-        TODO = "todo", "ToDo"
+        TODO = "todo", "To Do"
         IN_PROGRESS = "in_progress", "In Progress"
         DONE =  "done", "Done"
          

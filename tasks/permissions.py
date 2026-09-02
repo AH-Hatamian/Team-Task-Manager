@@ -1,13 +1,13 @@
 from rest_framework import permissions
-from .models import Membership, Team
+from django.shortcuts import get_object_or_404
+from .models import Membership, Team, Task
 
 
 def get_user_role(user, team):
     membership = Membership.objects.filter(team=team, user=user).first()
     return membership.role if membership else None
 
-
-class TeamPermission(permissions.BasePermission):
+class TeamDetailPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         role = get_user_role(request.user, obj)
 
@@ -19,8 +19,13 @@ class TeamPermission(permissions.BasePermission):
 
         return role is not None
 
+class TaskListPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        team_id = view.kwargs.get("pk")
+        get_object_or_404(Team, pk=team_id, members=request.user)
+        return True
 
-class TaskPermission(permissions.BasePermission):
+class TaskDetailPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         role = get_user_role(request.user, obj.team)
         is_creator = (obj.created_by == request.user)
@@ -30,16 +35,18 @@ class TaskPermission(permissions.BasePermission):
 
         return role is not None
 
-
-class MembershipPermission(permissions.BasePermission):
+class MembershipListPermission(permissions.BasePermission):
     def has_permission(self, request, view):
+        team_id = view.kwargs.get("pk")
+        team = get_object_or_404(Team, pk=team_id, members=request.user)
+        
         if request.method == "POST":
-            team_id = view.kwargs.get("pk")
-            team = Team.objects.get(pk=team_id)
             role = get_user_role(request.user, team)
             return role in [Membership.Role.OWNER, Membership.Role.ADMIN]
+            
         return True
 
+class MembershipDetailPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         role = get_user_role(request.user, obj.team)
 
@@ -56,7 +63,13 @@ class MembershipPermission(permissions.BasePermission):
         return role is not None
 
 
-class CommentPermission(permissions.BasePermission):
+class CommentListPermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        task_id = view.kwargs.get("pk")
+        get_object_or_404(Task, pk=task_id, team__members=request.user)
+        return True    
+
+class CommentDetailPermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         role = get_user_role(request.user, obj.task.team)
         is_author = (obj.author == request.user)

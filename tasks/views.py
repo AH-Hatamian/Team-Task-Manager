@@ -64,7 +64,7 @@ class MyTasksView(LoginRequiredMixin, ListView):
 class CreateTaskView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
     model = Task
     form_class = TaskForm
-    teamplate_name = "task_form.html"
+    template_name = "task_form.html"
 
     def get_team(self):
         return get_object_or_404(Team, pk=self.kwargs["pk"])
@@ -181,7 +181,8 @@ class CreateCommentView(LoginRequiredMixin, CreateView):
         return reverse("tasks:comment_list", kwargs={"pk": self.object.task.pk})
 
 
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, filters
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Team, Task
 from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer
 from .permissions import TeamPermission, TaskPermission, MembershipPermission, CommentPermission
@@ -189,6 +190,8 @@ from .permissions import TeamPermission, TaskPermission, MembershipPermission, C
 class TeamListCreateView(generics.ListCreateAPIView):
     serializer_class = TeamSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name"]
 
     def get_queryset(self):
         return Team.objects.filter(members = self.request.user)
@@ -204,6 +207,9 @@ class TeamListCreateView(generics.ListCreateAPIView):
 class TeamTaskListCreateView(generics.ListCreateAPIView):
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['status', 'assignee']
+    search_fields = ["title"]
 
     def get_queryset(self):
         team_id = self.kwargs["pk"]
@@ -256,6 +262,9 @@ class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 class MembershipListCreateView(generics.ListCreateAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated, MembershipPermission]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['role']
+    search_fields = ["user__username"]
 
     def get_queryset(self):
         team_id = self.kwargs["pk"]
@@ -263,6 +272,12 @@ class MembershipListCreateView(generics.ListCreateAPIView):
             team_id=team_id,
             team__memberships__user=self.request.user
         )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        team_id = self.kwargs["pk"]
+        context["team"] = Team.objects.get(pk=team_id)
+        return context
 
     def perform_create(self, serializer):
         team_id = self.kwargs["pk"]
@@ -282,6 +297,8 @@ class MembershipDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 class CommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["body"]
 
     def get_queryset(self):
         task_id = self.kwargs["pk"]

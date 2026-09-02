@@ -40,6 +40,18 @@ class MembershipSerializer(serializers.ModelSerializer):
         model = Membership
         fields = ["id", "team_name", "user", "user_name", "role"]
 
+    def validate(self, data):
+        member = data.get("user")
+        team = self.context.get("team")
+
+        if team and member:
+            is_member = Membership.objects.filter(team = team, user = member).exists()
+            if is_member:
+                raise serializers.ValidationError(
+                    {"user": f"user is already a member of team '{team.name}'"}
+                )
+        return data
+
 
 class CommentSerializer(serializers.ModelSerializer):
     task_title = serializers.CharField(source="task.title", read_only = True)

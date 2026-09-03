@@ -33,6 +33,7 @@ class TaskSerializer(serializers.ModelSerializer):
                     {"assignee": "user is not a member of this team"}
                 )
         return data    
+    
 class MembershipSerializer(serializers.ModelSerializer):
     team_name = serializers.CharField(source="team.name", read_only=True)
     user_name = serializers.CharField(source="user.username", read_only=True)
@@ -52,6 +53,10 @@ class MembershipSerializer(serializers.ModelSerializer):
                 )
         return data
 
+class MembershipRoleUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Membership
+        fields = ["id", "role"]
 
 class CommentSerializer(serializers.ModelSerializer):
     task_title = serializers.CharField(source="task.title", read_only = True)

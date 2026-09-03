@@ -202,6 +202,18 @@ class TaskPermissionTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_outsider_gets_404_in_team_tasks_view(self):
+        self.client.force_authenticate(user=self.outsider)
+        url = f"/api/teams/{self.team.pk}/tasks/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_member_gets_200_on_team_tasks_view(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/teams/{self.team.pk}/tasks/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_member_gets_200_in_team_task_detail_view(self):
         self.client.force_authenticate(user=self.member)
         url = f"/api/tasks/{self.task.pk}/"
@@ -270,4 +282,218 @@ class TaskPermissionTests(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
+class MembershipsPermissionTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='owner', password='pass123')
+        self.admin = User.objects.create_user(username='admin', password='pass123')
+        self.member = User.objects.create_user(username='member', password='pass123')
+        self.outsider = User.objects.create_user(username='outsider', password='pass123')
+        self.admin2 = User.objects.create_user(username='admin2', password='pass123')
+        self.testuser = User.objects.create_user(username='testuser', password='pass123')
+
+        self.team = Team.objects.create(name='Engineering')
+        self.admin_membership = Membership.objects.create(team=self.team, user=self.admin2, role=Membership.Role.ADMIN)
+        self.owner_membership =Membership.objects.create(team=self.team, user=self.owner, role=Membership.Role.OWNER)
+        Membership.objects.create(team=self.team, user=self.admin, role=Membership.Role.ADMIN)
+        self.member_membership = Membership.objects.create(team=self.team, user=self.member, role=Membership.Role.MEMBER)
+
+        self.task = Task.objects.create(
+            team=self.team,
+            title='Fix login bug',
+            created_by=self.owner,
+            assignee=self.member,
+        )
+
+        self.users = {
+            "outsider": self.outsider,
+            "member": self.member,
+            "admin": self.admin,
+            "owner": self.owner
+        }
+        self.members = [self.member, self.admin, self.owner]
+
+        self.methods = {
+            "get": self.client.get,
+            "put": lambda u: self.client.put(u, {"role": Membership.Role.ADMIN}),
+            "patch": lambda u: self.client.patch(u, {"role": Membership.Role.ADMIN}),
+            "delete": self.client.delete,
+        }
+
+    def test_outsider_gets_404_in_all_methods(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.outsider)
+        for method_name, method_func in self.methods.items():
+            with self.subTest(method = method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_outsider_gets_404_on_create_membership(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.post(
+            url,
+            {
+                "user": self.testuser.pk
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_outsider_gets_404_on_view_membership(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_member_gets_200_on_memberships_view(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.member)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_member_gets_200_on_view_membership_detail(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.member)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_member_get_403_on_create_membership(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            url,
+            {
+                "user": self.testuser.pk
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_member_gets_403_on_membership_edit_and_delete(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.member)
+        methods = {k: self.methods[k] for k in ["put", "patch", "delete"]}
+        for method_name, method_func in methods.items():
+            with self.subTest(method = method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_gets_201_on_membership_create(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post(
+            url,
+            {
+                "user": self.testuser.pk
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_gets_200_on_memberships_view(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_gets_200_on_view_membership_detail(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_gets_403_on_membership_edit(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.admin)
+        methods = {k: self.methods[k] for k in ["put", "patch"]}
+        for method_name, method_func in methods.items():
+            with self.subTest(method = method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_gets_403_on_delete_admins_and_owner(self):
+        self.client.force_authenticate(user=self.admin)
+        urls = [
+            f"/api/memberships/{self.admin_membership.pk}/",
+            f"/api/memberships/{self.owner_membership.pk}/"
+        ]
+        for url in urls:
+            with self.subTest(url = url):    
+                response = self.client.delete(url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_gets_204_on_member_delete(self):
+        self.client.force_authenticate(user=self.admin)
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_owner_gets_200_on_edit_membership(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.owner)
+        
+        methods = {k: self.methods[k] for k in ["put", "patch"]}
+        for method_name, method_func in methods.items():
+            with self.subTest(method=method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_owner_gets_200_on_memberships_view(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_owner_gets_200_on_view_membership_detail(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_owner_gets_201_on_membership_create(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            url,
+            {
+                "user": self.testuser.pk
+            }
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_owner_gets_204_on_delete_members_and_admins(self):
+        self.client.force_authenticate(user=self.owner)
+        urls = [
+            f"/api/memberships/{self.admin_membership.pk}/",
+            f"/api/memberships/{self.member_membership.pk}/"
+        ]
+        for url in urls:
+            with self.subTest(url = url):    
+                response = self.client.delete(url)
+                self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)        
+
+    def test_owner_patch_actually_changes_role(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        response = self.client.patch(url, {"role": Membership.Role.ADMIN})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.member_membership.refresh_from_db()
+        self.assertEqual(self.member_membership.role, Membership.Role.ADMIN)
+
+    def test_owner_put_actually_changes_role(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        response = self.client.put(url, {"role": Membership.Role.ADMIN})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.member_membership.refresh_from_db()
+        self.assertEqual(self.member_membership.role, Membership.Role.ADMIN)
+
+    def test_admin_gets_400_when_adding_existing_member(self):
+        self.client.force_authenticate(user=self.admin)
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        response = self.client.post(url, {"user": self.member.pk})  
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     
+    def test_owner_gets_400_when_adding_existing_member(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/memberships/"
+        response = self.client.post(url, {"user": self.member.pk})  
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

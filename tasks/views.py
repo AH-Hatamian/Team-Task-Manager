@@ -184,7 +184,7 @@ class CreateCommentView(LoginRequiredMixin, CreateView):
 from rest_framework import generics, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Team, Task
-from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer
+from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer, MembershipRoleUpdateSerializer
 from .permissions import (
     TeamDetailPermission,
     TaskListPermission, TaskDetailPermission,
@@ -283,19 +283,23 @@ class MembershipListCreateView(generics.ListCreateAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         team_id = self.kwargs["pk"]
-        context["team"] = Team.objects.get(pk=team_id)
+        context["team"] = get_object_or_404(Team, pk=team_id)
         return context
 
     def perform_create(self, serializer):
         team_id = self.kwargs["pk"]
-        team = Team.objects.get(pk=team_id)
-        serializer.save(team=team)
-
+        team = get_object_or_404(Team, pk=team_id)
+        serializer.save(team=team, role=Membership.Role.MEMBER)
 
 class MembershipDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated, MembershipDetailPermission]
-
+    
+    def get_serializer_class(self):
+        if self.request.method in ["PUT", "PATCH"]:
+            return MembershipRoleUpdateSerializer
+        return MembershipSerializer
+    
     def get_queryset(self):
         return Membership.objects.filter(
             team__memberships__user=self.request.user

@@ -55,7 +55,7 @@ class MembershipDetailPermission(permissions.BasePermission):
 
         if request.method == "DELETE":
             if role == Membership.Role.OWNER:
-                return True
+                return obj.role != Membership.Role.OWNER
             if role == Membership.Role.ADMIN:
                 return obj.role == Membership.Role.MEMBER
             return False

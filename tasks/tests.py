@@ -615,7 +615,6 @@ class CommentPermissionTest(APITestCase):
         for user in users:
             with self.subTest(user=user):
                 self.client.force_authenticate(user=user)
-                url = f"/api/comments/{self.comment_member2.pk}/"
                 methods = {k: self.methods[k] for k in ["put", "patch"]}
                 for method_name, method_func in methods.items():
                     with self.subTest(method=method_name):

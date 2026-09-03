@@ -497,3 +497,154 @@ class MembershipsPermissionTests(APITestCase):
         url = f"/api/teams/{self.team.pk}/memberships/"
         response = self.client.post(url, {"user": self.member.pk})  
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class CommentPermissionTest(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(username='owner', password='pass123')
+        self.admin = User.objects.create_user(username='admin', password='pass123')
+        self.member = User.objects.create_user(username='member', password='pass123')
+        self.member2 = User.objects.create_user(username='member2', password='pass123')
+        self.outsider = User.objects.create_user(username='outsider', password='pass123')
+
+        self.team = Team.objects.create(name='Engineering')
+        Membership.objects.create(team=self.team, user=self.owner, role=Membership.Role.OWNER)
+        Membership.objects.create(team=self.team, user=self.admin, role=Membership.Role.ADMIN)
+        Membership.objects.create(team=self.team, user=self.member, role=Membership.Role.MEMBER)
+        Membership.objects.create(team=self.team, user=self.member2, role=Membership.Role.MEMBER)
+
+        self.task = Task.objects.create(
+            team=self.team,
+            title='Fix login bug',
+            created_by=self.owner,
+            assignee=self.member,
+        )
+
+
+        self.comment_member = Comment.objects.create(author=self.member, task=self.task, body="test comment")
+        self.comment_member2 = Comment.objects.create(author=self.member2, task=self.task, body="test comment 2")
+
+
+        self.methods = {
+            "get": self.client.get,
+            "put": lambda u: self.client.put(u, {"body": "changed"}),
+            "patch": lambda u: self.client.patch(u, {"body": "changed"}),
+            "delete": self.client.delete,
+        }
+
+
+    def test_outsider_gets_404_in_task_comment_all_methods(self):
+        self.client.force_authenticate(user=self.outsider)
+        url = f"/api/comments/{self.comment_member2.pk}/"
+
+        for method_name, method_func in self.methods.items():
+            with self.subTest(method=method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_outsider_gets_404_in_comment_create(self):
+        self.client.force_authenticate(user=self.outsider)
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        response = self.client.post(url, {"body": "my comment"})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_outsider_gets_404_on_comment_view(self):
+        self.client.force_authenticate(user=self.outsider)
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_member_gets_201_in_comment_create(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        response = self.client.post(url, {"body": "my comment"})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_member_gets_200_on_comment_view(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_member_gets_200_on_comment_detail_view(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_member_gets_403_on_comments_edit_and_delete(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        methods = {k: self.methods[k] for k in ["put", "patch", "delete"]}
+        for method_name, method_func in methods.items():
+            with self.subTest(method=method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_and_owner_gets_201_in_comment_create(self):
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        users = [self.admin, self.owner]
+        for user in users:
+            with self.subTest(user=user):
+                self.client.force_authenticate(user=user)
+                response = self.client.post(url, {"body": "my comment"})
+                self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_admin_and_owner_gets_200_on_comment_view(self):
+        url = f"/api/tasks/{self.task.pk}/comments/"
+        users = [self.admin, self.owner]
+        for user in users:
+            with self.subTest(user=user):       
+                self.client.force_authenticate(user=user)
+                
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_and_owner_gets_200_on_comment_detail_view(self):
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        users = [self.admin, self.owner]
+        for user in users:
+            with self.subTest(user=user):
+                self.client.force_authenticate(user=user)
+                
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_admin_and_owner_gets_403_on_comments_edit(self):
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        users = [self.admin, self.owner]
+        for user in users:
+            with self.subTest(user=user):
+                self.client.force_authenticate(user=user)
+                url = f"/api/comments/{self.comment_member2.pk}/"
+                methods = {k: self.methods[k] for k in ["put", "patch"]}
+                for method_name, method_func in methods.items():
+                    with self.subTest(method=method_name):
+                        response = method_func(url)
+                        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_gets_204_on_comment_delete(self):
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_admin_gets_204_on_comment_delete(self):
+        url = f"/api/comments/{self.comment_member2.pk}/"
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_member_gets_200_on_edit_own_comments(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/comments/{self.comment_member.pk}/"
+        methods = {k: self.methods[k] for k in ["put", "patch"]}
+        for method_name, method_func in methods.items():
+            with self.subTest(method=method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_member_gets_204_on_delete_own_comments(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/comments/{self.comment_member.pk}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

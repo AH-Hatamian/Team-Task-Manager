@@ -666,3 +666,82 @@ class CommentPermissionTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.comment_member.refresh_from_db()
         self.assertEqual(self.comment_member.body, "changed")
+
+class TransferOwnershipPermissionTest(APITestCase):
+    def setUp(self):
+
+        self.owner = User.objects.create_user(username='owner', password='pass123')
+        self.admin = User.objects.create_user(username='admin', password='pass123')
+        self.member = User.objects.create_user(username='member', password='pass123')
+        self.outsider = User.objects.create_user(username='outsider', password='pass123')
+
+        self.team = Team.objects.create(name='Engineering')
+        self.owner_membership = Membership.objects.create(team=self.team, user=self.owner, role=Membership.Role.OWNER)
+        self.admin_membership = Membership.objects.create(team=self.team, user=self.admin, role=Membership.Role.ADMIN)
+        self.member_membership = Membership.objects.create(team=self.team, user=self.member, role=Membership.Role.MEMBER)
+
+        self.method = {"new_owner": self.admin.pk}
+        
+
+
+    def test_outsider_gets_404_on_transfer(self):
+        self.client.force_authenticate(user=self.outsider)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, self.method)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_member_and_admin_gets_404_on_transfer(self):
+        roles = [self.member, self.admin]
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        for role in roles:
+            with self.subTest(user=role):
+                self.client.force_authenticate(user=role)
+                response = self.client.post(url, self.method)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_gets_400_when_target_is_not_admin(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, {"new_owner": self.member.pk})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_gets_400_when_target_is_not_a_member(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, {"new_owner": self.outsider.pk})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_gets_400_when_transferring_to_self(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, {"new_owner": self.owner.pk})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_gets_200_on_transfer_admin(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, self.method)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_owner_actually_transfer_ownership(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response =self.client.post(url, self.method)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.owner_membership.refresh_from_db()
+        self.admin_membership.refresh_from_db()
+        self.assertEqual(self.owner_membership.role, Membership.Role.ADMIN)
+        self.assertEqual(self.admin_membership.role, Membership.Role.OWNER)
+
+    def test_owner_gets_400_when_new_owner_missing(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_gets_400_when_new_owner_id_invalid(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        response = self.client.post(url, {"new_owner": 99999})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                

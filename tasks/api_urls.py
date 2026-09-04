@@ -3,7 +3,7 @@ from django.urls import path, include
 from .views import (
     TeamDetailAPIView, TeamListCreateView, TaskListCreateView, TaskDetailAPIView, 
     TeamTaskListCreateView, MembershipListCreateView, MembershipDetailAPIView,
-    CommentListCreateView, CommentDetailAPIView
+    CommentListCreateView, CommentDetailAPIView, TransferOwnershipView
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -33,4 +33,5 @@ urlpatterns = [
     path("tasks/<int:pk>/comments/", CommentListCreateView.as_view(), name="task-comments"),
     path("comments/<int:pk>/", CommentDetailAPIView.as_view(), name="comment-detail"),
 
+    path('teams/<int:pk>/transfer-ownership/', TransferOwnershipView.as_view(), name='transfer-ownership'),
 ]

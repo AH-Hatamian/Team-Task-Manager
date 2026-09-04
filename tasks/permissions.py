@@ -81,3 +81,10 @@ class CommentDetailPermission(permissions.BasePermission):
             return role in [Membership.Role.OWNER, Membership.Role.ADMIN] or is_author
 
         return role is not None
+    
+class TransferOwnershipPermission(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        role = get_user_role(request.user, obj)
+        if role:
+            return role == Membership.Role.OWNER
+        else : return None

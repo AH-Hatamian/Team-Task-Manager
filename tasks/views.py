@@ -181,9 +181,12 @@ class CreateCommentView(LoginRequiredMixin, CreateView):
         return reverse("tasks:comment_list", kwargs={"pk": self.object.task.pk})
 
 
-from rest_framework import generics, permissions, filters
+from rest_framework import generics, permissions, filters, status
+from rest_framework.views import APIView
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Team, Task
+from rest_framework.response import Response
 from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer, MembershipRoleUpdateSerializer
 from .permissions import (
     TeamDetailPermission,
@@ -191,7 +194,8 @@ from .permissions import (
     MembershipListPermission,
     MembershipDetailPermission,
     CommentListPermission,
-    CommentDetailPermission
+    CommentDetailPermission,
+    TransferOwnershipPermission
 )
 
 class TeamListCreateView(generics.ListCreateAPIView):
@@ -333,4 +337,56 @@ class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             task__team__memberships__user=self.request.user
         )
 
-    
+
+class TransferOwnershipView(APIView):
+    permission_classes = [permissions.IsAuthenticated, TransferOwnershipPermission]
+
+    def post(self, request, pk):
+        team = get_object_or_404(Team, pk=pk, members=request.user)
+        self.check_object_permissions(request, team)
+
+        new_owner_id = request.data.get("new_owner")
+        if not new_owner_id:
+            return Response(
+                {"detail": "new_owner is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        new_owner_membership = Membership.objects.filter(
+            team=team, user_id=new_owner_id
+        ).first()
+
+        if not new_owner_membership:
+            return Response(
+                {"detail": "User is not a member of this team."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_owner_membership.role == Membership.Role.MEMBER:
+            return Response(
+                {"detail": "New owner must be an existing Admin."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_owner_membership.user == request.user:
+            return Response(
+                {"detail": "You are already the owner."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        old_owner_membership = Membership.objects.get(team=team, user=request.user)
+
+        with transaction.atomic():
+            old_owner_membership.role = Membership.Role.ADMIN
+            old_owner_membership.save()
+
+            new_owner_membership.role = Membership.Role.OWNER
+            new_owner_membership.save()
+
+        return Response(
+            {"detail": "Ownership transferred successfully."},
+            status=status.HTTP_200_OK
+        )
+
+
+

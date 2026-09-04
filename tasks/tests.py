@@ -491,12 +491,23 @@ class MembershipsPermissionTests(APITestCase):
         response = self.client.post(url, {"user": self.member.pk})  
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    
     def test_owner_gets_400_when_adding_existing_member(self):
         self.client.force_authenticate(user=self.owner)
         url = f"/api/teams/{self.team.pk}/memberships/"
         response = self.client.post(url, {"user": self.member.pk})  
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_owner_gets_400_on_set_owner_memberships(self):
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        self.client.force_authenticate(user=self.owner)
+        methods = { 
+            "put": lambda u: self.client.put(u, {"role": Membership.Role.OWNER}),
+            "patch": lambda u: self.client.patch(u, {"role": Membership.Role.OWNER}),
+        }        
+        for method_name, method_func in methods.items():
+            with self.subTest(method=method_name):
+                response = method_func(url)
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 class CommentPermissionTest(APITestCase):
     def setUp(self):
@@ -647,3 +658,11 @@ class CommentPermissionTest(APITestCase):
         url = f"/api/comments/{self.comment_member.pk}/"
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_member_patch_actually_changes_comment_body(self):
+        self.client.force_authenticate(user=self.member)
+        url = f"/api/comments/{self.comment_member.pk}/"
+        response = self.client.patch(url, {"body": "changed"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.comment_member.refresh_from_db()
+        self.assertEqual(self.comment_member.body, "changed")

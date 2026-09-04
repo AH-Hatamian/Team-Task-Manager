@@ -58,6 +58,13 @@ class MembershipRoleUpdateSerializer(serializers.ModelSerializer):
         model = Membership
         fields = ["id", "role"]
 
+    def validate_role(self, value):
+        if value == Membership.Role.OWNER:
+            raise serializers.ValidationError(
+                "Cannot set role to Owner directly. Use the transfer-ownership endpoint instead."
+            )
+        return value
+
 class CommentSerializer(serializers.ModelSerializer):
     task_title = serializers.CharField(source="task.title", read_only = True)
     author_name = serializers.CharField(source='author.username', read_only=True)

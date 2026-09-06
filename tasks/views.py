@@ -270,7 +270,7 @@ class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Task.objects.filter(
             team__memberships__user=self.request.user
-        )
+        ).select_related('assignee', 'created_by', 'team')
 class MembershipListCreateView(generics.ListCreateAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated, MembershipListPermission]
@@ -312,7 +312,7 @@ class MembershipDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Membership.objects.filter(
             team__memberships__user=self.request.user
-        )
+        ).select_related('user', 'team')
 
 class CommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
@@ -340,7 +340,7 @@ class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         return Comment.objects.filter(
             task__team__memberships__user=self.request.user
-        )
+        ).select_related('author', 'task')
 
 
 class TransferOwnershipView(APIView):

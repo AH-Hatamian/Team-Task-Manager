@@ -777,3 +777,107 @@ class TransferOwnershipPermissionTest(APITestCase):
         url = f"/api/memberships/{self.owner_membership.pk}/"
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+
+from rest_framework.test import APITestCase
+from rest_framework import status
+from django.test.utils import CaptureQueriesContext
+from django.db import connection
+from django.contrib.auth import get_user_model
+from .models import Team, Task, Membership, Comment
+
+User = get_user_model()
+
+class PerformanceAndPaginationTests(APITestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester', password='123')
+        self.team = Team.objects.create(name='Performance Team')
+        Membership.objects.create(team=self.team, user=self.user, role=Membership.Role.OWNER)
+        self.client.force_authenticate(user=self.user)
+
+    def test_team_list_annotation_is_optimized(self):
+        url = "/api/teams/"
+
+        with CaptureQueriesContext(connection) as ctx1:
+            self.client.get(url)
+        queries_for_one = len(ctx1.captured_queries)
+
+        for i in range(5):
+            new_team = Team.objects.create(name=f'Team {i}')
+            Membership.objects.create(team=new_team, user=self.user, role=Membership.Role.MEMBER)
+
+        with CaptureQueriesContext(connection) as ctx2:
+            self.client.get(url)
+        queries_for_six = len(ctx2.captured_queries)
+
+        self.assertEqual(queries_for_one, queries_for_six)
+
+    def test_membership_list_has_no_n_plus_one_bug(self):
+        url = f"/api/teams/{self.team.pk}/memberships/"
+
+        with CaptureQueriesContext(connection) as ctx1:
+            self.client.get(url)
+        queries_for_one = len(ctx1.captured_queries)
+
+        for i in range(5):
+            new_user = User.objects.create_user(username=f'user{i}', password='123')
+            Membership.objects.create(team=self.team, user=new_user, role=Membership.Role.MEMBER)
+
+        with CaptureQueriesContext(connection) as ctx2:
+            self.client.get(url)
+        queries_for_six = len(ctx2.captured_queries)
+
+        self.assertEqual(queries_for_one, queries_for_six)
+
+    def test_task_list_has_no_n_plus_one_bug(self):
+        Task.objects.create(team=self.team, title='Task 1', created_by=self.user)
+        url = f"/api/teams/{self.team.pk}/tasks/"
+
+        with CaptureQueriesContext(connection) as ctx1:
+            self.client.get(url)
+        queries_for_one = len(ctx1.captured_queries)
+
+        for i in range(5):
+            Task.objects.create(team=self.team, title=f'Task {i+2}', created_by=self.user)
+
+        with CaptureQueriesContext(connection) as ctx2:
+            self.client.get(url)
+        queries_for_six = len(ctx2.captured_queries)
+
+        self.assertEqual(queries_for_one, queries_for_six)
+
+    def test_comment_list_has_no_n_plus_one_bug(self):
+        task = Task.objects.create(team=self.team, title='Comment Task', created_by=self.user)
+        Comment.objects.create(task=task, author=self.user, body='First comment')
+
+        url = f"/api/tasks/{task.pk}/comments/"
+
+        with CaptureQueriesContext(connection) as ctx1:
+            self.client.get(url)
+        queries_for_one = len(ctx1.captured_queries)
+
+        for i in range(5):
+            Comment.objects.create(task=task, author=self.user, body=f'Comment {i}')
+
+        with CaptureQueriesContext(connection) as ctx2:
+            self.client.get(url)
+        queries_for_six = len(ctx2.captured_queries)
+
+        self.assertEqual(queries_for_one, queries_for_six)
+
+    def test_pagination_limits_data_correctly(self):
+        tasks = [Task(team=self.team, title=f'Task {i}', created_by=self.user) for i in range(25)]
+        Task.objects.bulk_create(tasks)
+
+        url = f"/api/teams/{self.team.pk}/tasks/"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('count', response.data)
+        self.assertIn('next', response.data)
+        self.assertIn('results', response.data)
+        self.assertEqual(response.data['count'], 25)
+        self.assertEqual(len(response.data['results']), 10)
+        self.assertIsNotNone(response.data['next'])  

@@ -162,6 +162,7 @@ class TaskPermissionTests(APITestCase):
             "delete": self.client.delete,
         }
 
+
     def test_members_gets_201_on_create_task(self):
         url = f"/api/teams/{self.team.pk}/tasks/"
         members = {self.users[k] for k in ["member", "admin", "owner"]}
@@ -318,7 +319,7 @@ class MembershipsPermissionTests(APITestCase):
             "patch": lambda u: self.client.patch(u, {"role": Membership.Role.ADMIN}),
             "delete": self.client.delete,
         }
-
+        
     def test_outsider_gets_404_in_all_methods(self):
         url = f"/api/memberships/{self.member_membership.pk}/"
         self.client.force_authenticate(user=self.outsider)
@@ -508,6 +509,32 @@ class MembershipsPermissionTests(APITestCase):
             with self.subTest(method=method_name):
                 response = method_func(url)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_task_assignee_is_cleared_when_membership_deleted(self):
+       
+        task1 = Task.objects.create(
+            team=self.team,
+            title='Ghost Task 1',
+            created_by=self.owner,
+            assignee=self.member
+        )
+        task2 = Task.objects.create(
+            team=self.team,
+            title='Ghost Task 2',
+            created_by=self.owner,
+            assignee=self.member
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/memberships/{self.member_membership.pk}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        task1.refresh_from_db()
+        task2.refresh_from_db()
+
+        self.assertIsNone(task1.assignee)
+        self.assertIsNone(task2.assignee)
 
 class CommentPermissionTest(APITestCase):
     def setUp(self):
@@ -744,4 +771,9 @@ class TransferOwnershipPermissionTest(APITestCase):
         url = f"/api/teams/{self.team.pk}/transfer-ownership/"
         response = self.client.post(url, {"new_owner": 99999})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                
+
+    def test_owner_gets_403_when_deleting_own_membership(self):
+        self.client.force_authenticate(user=self.owner)
+        url = f"/api/memberships/{self.owner_membership.pk}/"
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

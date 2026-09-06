@@ -1,5 +1,15 @@
 from django.contrib import admin
 from .models import Team, Membership, Task, Comment
+from django.contrib.auth import get_user_model
+from django.contrib.auth.admin import UserAdmin
+
+User = get_user_model()
+
+admin.site.unregister(User)
+
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('id', 'username', 'email', 'is_staff', 'is_active')
 
 class MembershipInline(admin.TabularInline):
     model = Membership

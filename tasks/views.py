@@ -180,7 +180,7 @@ class CreateCommentView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse("tasks:comment_list", kwargs={"pk": self.object.task.pk})
 
-
+from django.db.models import Count
 from rest_framework import generics, permissions, filters, status
 from rest_framework.views import APIView
 from django.db import transaction
@@ -205,7 +205,9 @@ class TeamListCreateView(generics.ListCreateAPIView):
     search_fields = ["name"]
 
     def get_queryset(self):
-        return Team.objects.filter(members = self.request.user)
+        return Team.objects.filter(members = self.request.user).annotate(
+            member_count_annotated=Count('memberships')
+        )
 
     def perform_create(self, serializer):
         team = serializer.save()
@@ -224,7 +226,7 @@ class TeamTaskListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         team_id = self.kwargs["pk"]
-        return Task.objects.filter(team_id = team_id, team__members = self.request.user)
+        return Task.objects.filter(team_id = team_id, team__members = self.request.user).select_related('assignee', 'created_by', 'team')
 
     def perform_create(self, serializer):
         team_id = self.kwargs["pk"]
@@ -251,7 +253,7 @@ class TaskListCreateView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Task.objects.filter(assignee=self.request.user)
+        return Task.objects.filter(assignee=self.request.user).select_related('assignee', 'created_by', 'team')
 
     
 
@@ -269,31 +271,34 @@ class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return Task.objects.filter(
             team__memberships__user=self.request.user
         )
-
 class MembershipListCreateView(generics.ListCreateAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated, MembershipListPermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['role']
     search_fields = ["user__username"]
+        
+    def get_team(self):
+        if not hasattr(self, '_team'):
+            team_id = self.kwargs["pk"]
+            self._team = get_object_or_404(
+                Team.objects.filter(members=self.request.user),
+                pk=team_id
+            )
+        return self._team
 
     def get_queryset(self):
-        team_id = self.kwargs["pk"]
         return Membership.objects.filter(
-            team_id=team_id,
-            team__members=self.request.user
-        )
+            team=self.get_team()
+        ).select_related('user', 'team')
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        team_id = self.kwargs["pk"]
-        context["team"] = get_object_or_404(Team, pk=team_id)
+        context["team"] = self.get_team()
         return context
 
     def perform_create(self, serializer):
-        team_id = self.kwargs["pk"]
-        team = get_object_or_404(Team, pk=team_id)
-        serializer.save(team=team, role=Membership.Role.MEMBER)
+        serializer.save(team=self.get_team(), role=Membership.Role.MEMBER)
 
 class MembershipDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = MembershipSerializer
@@ -320,7 +325,7 @@ class CommentListCreateView(generics.ListCreateAPIView):
         return Comment.objects.filter(
             task_id=task_id,
             task__team__memberships__user=self.request.user
-        )
+        ).select_related('author', 'task')
 
     def perform_create(self, serializer):
         task_id = self.kwargs["pk"]

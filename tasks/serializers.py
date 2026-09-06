@@ -2,15 +2,12 @@ from rest_framework import serializers
 from .models import Team, Task, Membership, Comment
 
 class TeamSerializer(serializers.ModelSerializer):
-    member_count = serializers.SerializerMethodField()
+    member_count = serializers.IntegerField(source='member_count_annotated', read_only=True)
 
     class Meta:
         model = Team
         fields = ["id", "name", "description", "created_at", "member_count"]
         read_only_fields = ["created_at"]
-
-    def get_member_count(self, obj):
-        return obj.memberships.count()
 
 class TaskSerializer(serializers.ModelSerializer):
     assignee_username = serializers.CharField(source='assignee.username', read_only=True)
@@ -40,6 +37,7 @@ class MembershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = Membership
         fields = ["id", "team_name", "user", "user_name", "role"]
+        read_only_fields = ["role"]
 
     def validate(self, data):
         member = data.get("user")

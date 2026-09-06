@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'drf_spectacular',
     'tasks',
     'rest_framework',
     'django_filters',
@@ -63,6 +64,14 @@ REST_FRAMEWORK = {
         'user': '100/minute',
         'transfer_ownership': '3/hour',
     },
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Team Task Manager API',
+    'DESCRIPTION': 'مستندات هوشمند و تعاملی سیستم مدیریت تسک',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 from datetime import timedelta

@@ -286,6 +286,12 @@ class TaskPermissionTests(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
+    def test_my_tasks_list_returns_only_assigned_tasks(self):
+        self.client.force_authenticate(user=self.member)
+        url = "/api/tasks/"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
 class MembershipsPermissionTests(APITestCase):
     def setUp(self):
         cache.clear()

@@ -195,7 +195,8 @@ from .permissions import (
     MembershipDetailPermission,
     CommentListPermission,
     CommentDetailPermission,
-    TransferOwnershipPermission
+    TransferOwnershipPermission,
+    TransferOwnershipThrottle
 )
 
 class TeamListCreateView(generics.ListCreateAPIView):
@@ -345,6 +346,7 @@ class CommentDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
 class TransferOwnershipView(APIView):
     permission_classes = [permissions.IsAuthenticated, TransferOwnershipPermission]
+    throttle_classes = [TransferOwnershipThrottle]
 
     def post(self, request, pk):
         team = get_object_or_404(Team, pk=pk, members=request.user)

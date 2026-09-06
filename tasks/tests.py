@@ -3,12 +3,14 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from .models import Team, Task, Membership, Comment
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 
 User = get_user_model()
 
 class TeamPermissionTests(APITestCase):
 
     def setUp(self):
+        cache.clear()
         self.owner = User.objects.create_user(username='owner', password='pass123')
         self.admin = User.objects.create_user(username='admin', password='pass123')
         self.member = User.objects.create_user(username='member', password='pass123')
@@ -122,6 +124,7 @@ class TeamPermissionTests(APITestCase):
 class TaskPermissionTests(APITestCase):
 
     def setUp(self):
+        cache.clear()
         self.owner = User.objects.create_user(username='owner', password='pass123')
         self.admin = User.objects.create_user(username='admin', password='pass123')
         self.member = User.objects.create_user(username='member', password='pass123')
@@ -285,6 +288,7 @@ class TaskPermissionTests(APITestCase):
 
 class MembershipsPermissionTests(APITestCase):
     def setUp(self):
+        cache.clear()
         self.owner = User.objects.create_user(username='owner', password='pass123')
         self.admin = User.objects.create_user(username='admin', password='pass123')
         self.member = User.objects.create_user(username='member', password='pass123')
@@ -538,6 +542,7 @@ class MembershipsPermissionTests(APITestCase):
 
 class CommentPermissionTest(APITestCase):
     def setUp(self):
+        cache.clear()
         self.owner = User.objects.create_user(username='owner', password='pass123')
         self.admin = User.objects.create_user(username='admin', password='pass123')
         self.member = User.objects.create_user(username='member', password='pass123')
@@ -696,7 +701,7 @@ class CommentPermissionTest(APITestCase):
 
 class TransferOwnershipPermissionTest(APITestCase):
     def setUp(self):
-
+        cache.clear()
         self.owner = User.objects.create_user(username='owner', password='pass123')
         self.admin = User.objects.create_user(username='admin', password='pass123')
         self.member = User.objects.create_user(username='member', password='pass123')
@@ -881,3 +886,33 @@ class PerformanceAndPaginationTests(APITestCase):
         self.assertEqual(response.data['count'], 25)
         self.assertEqual(len(response.data['results']), 10)
         self.assertIsNotNone(response.data['next'])  
+
+
+class ThrottlingTests(APITestCase):
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='throttle_test', password='pass123')
+        self.client.force_authenticate(user=self.user)
+
+        self.owner = User.objects.create_user(username='owner', password='pass123')
+        self.admin = User.objects.create_user(username='admin', password='pass123')
+
+        self.team = Team.objects.create(name='Engineering')
+        Membership.objects.create(team=self.team, user=self.owner, role=Membership.Role.OWNER)
+        Membership.objects.create(team=self.team, user=self.admin, role=Membership.Role.ADMIN)
+
+    def test_general_api_rate_limitt(self):
+        url = "/api/teams/"
+        for _ in range(100):
+            self.client.get(url)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_transfer_ownership_rate_limit(self):
+        url = f"/api/teams/{self.team.pk}/transfer-ownership/"
+        self.client.force_authenticate(user=self.owner)
+        for _ in range(10):
+                self.client.post(url, {"new_owner": self.admin.pk})
+        response = self.client.post(url, {"new_owner": self.admin.pk})
+        self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)

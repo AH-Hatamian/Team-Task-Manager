@@ -88,3 +88,8 @@ class TransferOwnershipPermission(permissions.BasePermission):
         if role:
             return role == Membership.Role.OWNER
         else : return None
+
+from rest_framework.throttling import UserRateThrottle
+
+class TransferOwnershipThrottle(UserRateThrottle):
+    scope = 'transfer_ownership'

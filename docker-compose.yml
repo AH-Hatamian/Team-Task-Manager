@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always 
+    environment:
+      POSTGRES_USER: team_user
+      POSTGRES_PASSWORD: team_password
+      POSTGRES_DB: team_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U team_user -d team_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+  web:
+    build: .
+    command: sh -c "python manage.py migrate && gunicorn core.wsgi:application --bind 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db: 
+        condition: service_healthy
+    environment:
+      - DEBUG=False
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - SECRET_KEY=any_random_secret_key_for_test_12345
+
+      - DATABASE_URL=postgres://team_user:team_password@db:5432/team_db
+    
+volumes:
+  postgres_data:

@@ -9,4 +9,7 @@ COPY . /app/
 
 EXPOSE 8000
 
+ENV SECRET_KEY=dummy-key-for-build-time-only
+RUN python manage.py collectstatic --noinput
+
 CMD ["gunicorn", "core.wsgi:application","--bind", "0000:8000"]

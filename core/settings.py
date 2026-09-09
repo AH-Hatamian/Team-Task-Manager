@@ -91,7 +91,7 @@ if DEBUG:
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Team Task Manager API',
-    'DESCRIPTION': 'مستندات هوشمند و تعاملی سیستم مدیریت تسک',
+    'DESCRIPTION': 'Smart and interactive documentation for the Task Management System',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }

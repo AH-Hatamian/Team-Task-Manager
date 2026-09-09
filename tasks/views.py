@@ -85,6 +85,7 @@ class TaskDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         return Task.objects.filter(
             team__memberships__user=self.request.user
         ).select_related('assignee', 'created_by', 'team')
+    
 class MembershipListCreateView(generics.ListCreateAPIView):
     serializer_class = MembershipSerializer
     permission_classes = [permissions.IsAuthenticated, MembershipListPermission]

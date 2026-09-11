@@ -77,21 +77,20 @@ The recommended way to run this project locally is via Docker.
 
 1.  **Clone the repository:**
     ```bash
-    git clone [https://github.com/AH-Hatamian/Team-Task-Manager.git](https://github.com/AH-Hatamian/Team-Task-Manager.git)
-    cd Team-Task-Manager
+    git clone https://github.com/AH-Hatamian/Team-Task-Manager.git
     ```
 
 2.  **Configure Environment Variables:**
     Create a `.env` file in the root directory:
     ```ini
-    DEBUG=True
+    DEBUG=False
     SECRET_KEY=your-secure-secret-key
     DJANGO_SECURE_SSL_REDIRECT=False
     ```
 
 3.  **Build and Start Containers:**
     ```bash
-    docker-compose up -d --build
+    docker compose up --build
     ```
     The API will be available at `http://localhost:8000/api/docs/`.
 
@@ -103,5 +102,5 @@ The project includes a comprehensive automated test suite maintaining a **99% ov
 
 To run the test suite and check coverage inside the Docker container:
 ```bash
-docker-compose exec web coverage run manage.py test
-docker-compose exec web coverage report
+docker compose exec web coverage run manage.py test
+docker compose exec web coverage report

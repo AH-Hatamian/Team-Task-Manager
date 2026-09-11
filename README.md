@@ -1,178 +1,107 @@
+# Team Task Manager (TSM) API
 
-# Team Task Manager
+A robust RESTful API for a simplified Trello/Asana-style task management system, built with Django and Django REST Framework. This project demonstrates backend engineering practices including role-based access control, JWT authentication, query optimization, comprehensive automated testing, and cloud deployment.
 
-A backend-only REST API for a simplified Trello/Asana-style task management system, built with Django and Django REST Framework. This project demonstrates backend engineering practices including role-based access control, JWT authentication, and secure API design — with no frontend included by design.
+## 🚀 Live Demo & API Documentation
+The API is fully containerized and deployed to the cloud. You can interact with the endpoints and create a test account via the self-hosted Swagger UI:
+👉 **[TSM Backend Live API Docs](https://tsm-backend.liara.run/api/docs/)**
 
-## Features
+---
 
-- **JWT Authentication** via `djangorestframework-simplejwt`
-- **Role-based access control** with three roles per team: Owner, Admin, Member
-- **Team-scoped resources** — tasks, memberships, and comments are all scoped to a team and filtered by the requester's membership
-- **Nested + flat URL structure** — list/create endpoints are nested under their parent resource; detail endpoints (retrieve/update/delete) are addressed directly by their own ID
-- **Security-first design** — resources outside a user's membership return `404` instead of `403` to prevent ID enumeration
-- **Custom permission classes** enforcing a full Owner/Admin/Member permission matrix across every resource
+## ✨ Key Features & Engineering Decisions
 
-## Tech Stack
+*   **Query & Performance Optimization:** Eliminated N+1 query issues by using `select_related` and `prefetch_related` across list and detail views. Replaced heavy Python loops with database-level ORM operations using `annotate` (e.g., counting memberships).
+*   **Security Hardening:** Implemented environment-based configuration for `DEBUG` and `ALLOWED_HOSTS`. Enforced strict security middleware including HTTPS redirects, secure cookies, and HSTS. Implemented JWT blacklisting to invalidate revoked refresh tokens.
+*   **Database Configuration:** Uses `dj-database-url` to configure SQLite for local development and PostgreSQL for production.
+*   **Atomic Transactions:** Critical endpoints, such as `TransferOwnershipView`, are wrapped in `transaction.atomic()` to ensure data integrity during complex role reassignments.
+*   **API Rate Limiting (Throttling):** Implemented global `AnonRateThrottle` (20/min) and `UserRateThrottle` (100/min), with highly restrictive custom throttling (5/hour) for sensitive endpoints like ownership transfer.
+*   **Self-Hosted OpenAPI Docs:** Integrated `drf-spectacular` with a sidecar setup to serve Swagger UI assets locally via WhiteNoise, bypassing geo-restricted external CDNs.
+*   **Nested + Flat URL Structure:** Creating/listing requires a parent (e.g., `POST /api/teams/{id}/tasks/`), making hierarchy explicit. Retrieving/updating/deleting needs only the resource ID (e.g., `PATCH /api/tasks/{id}/`).
 
-- Python / Django
-- Django REST Framework
-- djangorestframework-simplejwt (JWT authentication)
-- SQLite (development)
+## 🛠️ Tech Stack
 
-## Project Structure
+*   **Backend:** Python, Django, Django REST Framework (DRF)
+*   **Database:** PostgreSQL (Production), SQLite (Development)
+*   **Auth:** JSON Web Tokens (JWT) via `djangorestframework-simplejwt`
+*   **DevOps & Deployment:** Docker, Docker Compose, Gunicorn, WhiteNoise, Liara PaaS
+*   **Testing & Docs:** `coverage.py` (99% overall coverage), `drf-spectacular` (OpenAPI 3.0)
 
-The project is organized around four core models:
+---
 
-- **Team** — top-level resource; owns tasks and memberships
-- **Membership** — through-model linking `User` and `Team`, carrying a `role` (Owner / Admin / Member)
-- **Task** — scoped to a `Team`, with separate `assignee` and `created_by` fields
-- **Comment** — scoped to a `Task`, exposing a `team` property for consistent permission checks
+## 🛡️ Authorization & Business Logic Security
 
-## Setup & Installation
+*   **404 Instead of 403:** Every `get_queryset()` filters by the requesting user's membership *before* object lookup. Users with no relationship to a resource receive a `404 Not Found` rather than `403 Forbidden`, helping prevent ID enumeration attacks.
+*   **Role-Escalation Prevention:** Custom validators in `MembershipRoleUpdateSerializer` strictly prevent direct assignment of the `OWNER` role through standard update endpoints.
+*   **Owner Delete Protection:** System prevents the last active Owner of a team from deleting their own membership.
 
-```bash
-# Clone the repository
-git clone <repo-url>
-cd team-task-manager
-
-# Create and activate a virtual environment
-python -m venv venv
-source venv/bin/activate  # on Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Apply migrations
-python manage.py migrate
-
-# Create a superuser (optional, for Django admin access)
-python manage.py createsuperuser
-
-# Run the development server
-python manage.py runserver
-```
-
-## Authentication
-
-This API uses JWT authentication. Obtain a token pair with your username and password, then include the access token in the `Authorization` header of subsequent requests.
-
-```
-POST /api/token/
-Content-Type: application/json
-
-{
-  "username": "your_username",
-  "password": "your_password"
-}
-```
-
-Response:
-```json
-{
-  "refresh": "eyJ...",
-  "access": "eyJ..."
-}
-```
-
-For all authenticated requests:
-```
-Authorization: Bearer <access_token>
-```
-
-Refresh an expired access token:
-```
-POST /api/token/refresh/
-Content-Type: application/json
-
-{
-  "refresh": "eyJ..."
-}
-```
-
-## API Endpoints
-
-### Auth
-
-| Method | Endpoint | Description |
-|--------|----------|--------------|
-| POST | `/api/token/` | Obtain access + refresh token pair |
-| POST | `/api/token/refresh/` | Refresh an access token |
-
-### Teams
-
-| Method | Endpoint | Description |
-|--------|----------|--------------|
-| GET | `/api/teams/` | List teams the current user is a member of |
-| POST | `/api/teams/` | Create a new team (creator becomes Owner automatically) |
-| GET | `/api/teams/{id}/` | Retrieve a team's details |
-| PUT/PATCH | `/api/teams/{id}/` | Update a team (Owner or Admin only) |
-| DELETE | `/api/teams/{id}/` | Delete a team (Owner only) |
-
-### Tasks
-
-| Method | Endpoint | Description |
-|--------|----------|--------------|
-| GET | `/api/teams/{team_id}/tasks/` | List tasks belonging to a team |
-| POST | `/api/teams/{team_id}/tasks/` | Create a task under a team (any member) |
-| GET | `/api/my_tasks/` | List tasks assigned to the current user, across all teams |
-| GET | `/api/tasks/{id}/` | Retrieve a task's details |
-| PUT/PATCH | `/api/tasks/{id}/` | Update a task (Owner, Admin, or the task's creator) |
-| DELETE | `/api/tasks/{id}/` | Delete a task (Owner, Admin, or the task's creator) |
-
-### Memberships
-
-| Method | Endpoint | Description |
-|--------|----------|--------------|
-| GET | `/api/teams/{team_id}/memberships/` | List a team's members |
-| POST | `/api/teams/{team_id}/memberships/` | Add a member to the team (Owner or Admin only) |
-| GET | `/api/memberships/{id}/` | Retrieve a membership's details |
-| PATCH | `/api/memberships/{id}/` | Change a member's role (Owner only) |
-| DELETE | `/api/memberships/{id}/` | Remove a member (Owner can remove anyone; Admin can only remove Members) |
-
-### Comments
-
-| Method | Endpoint | Description |
-|--------|----------|--------------|
-| GET | `/api/tasks/{task_id}/comments/` | List comments on a task |
-| POST | `/api/tasks/{task_id}/comments/` | Add a comment (any team member) |
-| GET | `/api/comments/{id}/` | Retrieve a comment |
-| PUT/PATCH | `/api/comments/{id}/` | Edit a comment (author only) |
-| DELETE | `/api/comments/{id}/` | Delete a comment (author, Owner, or Admin) |
-
-## Permission Matrix
+### Permission Matrix
 
 | Action | Owner | Admin | Member |
 |--------|:---:|:---:|:---:|
 | Edit team info | ✅ | ✅ | ❌ |
 | Delete team | ✅ | ❌ | ❌ |
+| Transfer team ownership | ✅ | ❌ | ❌ |
 | Add a member | ✅ | ✅ | ❌ |
 | Change a member's role | ✅ | ❌ | ❌ |
-| Remove a Member | ✅ | ✅ | ❌ |
-| Remove an Admin/Owner | ✅ | ❌ | ❌ |
+| Remove a Member / Admin | ✅ | ✅ (Members only) | ❌ |
 | Create a task | ✅ | ✅ | ✅ |
 | Edit/delete any task | ✅ | ✅ | ❌ |
 | Edit/delete own task | ✅ | ✅ | ✅ |
 | Comment on a task | ✅ | ✅ | ✅ |
-| Edit own comment | ✅ | ✅ | ✅ |
-| Delete own comment | ✅ | ✅ | ✅ |
-| Delete others' comment | ✅ | ✅ | ❌ |
 
-## Key Architectural Decisions
+---
 
-**JWT over session authentication.** The API is designed to be consumed independently of any frontend, so token-based authentication was chosen over Django's session auth to keep the API stateless and consistent with common industry practice.
+## 🌐 API Endpoints
 
-**Nested list/create, flat detail URLs.** Creating or listing a resource requires knowing its parent (e.g. `POST /api/teams/{id}/tasks/`), since REST resource creation should make the hierarchy explicit. Retrieving, updating, or deleting a specific resource only needs its own ID (e.g. `PATCH /api/tasks/{id}/`), since the ID alone is already unique. This mirrors the URL structure used in the project's Phase 2 (classic Django views).
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|--------------|
+| POST | `/api/register/` | Register a new user account |
+| POST | `/api/token/` | Obtain access + refresh token pair |
+| POST | `/api/token/refresh/` | Refresh an access token |
 
-**Generic Views instead of ViewSets + Router.** Because the URL structure is a mix of nested and flat patterns, DRF's `ModelViewSet` + `DefaultRouter` combination — which assumes a single uniform resource pattern — was a poor fit without adding an extra dependency (`drf-nested-routers`). Explicit `generics.ListCreateAPIView` / `generics.RetrieveUpdateDestroyAPIView` pairs, wired up with manually defined URL patterns, keep full control over the hierarchy without external packages.
+### Teams
+| Method | Endpoint | Description |
+|--------|----------|--------------|
+| GET/POST | `/api/teams/` | List user's teams / Create a new team |
+| GET/PUT/DEL | `/api/teams/{id}/` | Retrieve / Update / Delete a team |
+| POST | `/api/teams/{id}/transfer_ownership/` | Atomically transfer team ownership |
 
-**404 instead of 403 for non-members.** Every `get_queryset()` filters by the requesting user's membership before any object is looked up. This means a user with no relationship to a resource gets a `404 Not Found` rather than a `403 Forbidden`, preventing them from even confirming the resource exists (ID enumeration protection). This applies specifically to users with *no* membership; a member whose *role* is insufficient for a given action (e.g. a Member attempting to delete a team) correctly receives a `403`, since they already know the resource exists.
+*(For full endpoints including Tasks, Memberships, and Comments, please visit the Live API Docs link above).*
 
-**Object-level permission classes per resource.** Each resource (`Team`, `Task`, `Membership`, `Comment`) has a dedicated `BasePermission` subclass that checks the requester's role via a shared `get_user_role()` helper, and — where relevant — ownership of the specific object (e.g. a task's `created_by`, a comment's `author`). This keeps authorization logic centralized in `permissions.py`, separate from serializer-level data validation.
+---
 
-## Running Tests
+## 🐳 Setup & Installation (Docker)
 
-*(Coming soon — automated test coverage for access-control logic is planned.)*
+The recommended way to run this project locally is via Docker.
 
-## License
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/AH-Hatamian/Team-Task-Manager.git](https://github.com/AH-Hatamian/Team-Task-Manager.git)
+    cd Team-Task-Manager
+    ```
 
-This project is for portfolio and educational purposes.
+2.  **Configure Environment Variables:**
+    Create a `.env` file in the root directory:
+    ```ini
+    DEBUG=True
+    SECRET_KEY=your-secure-secret-key
+    DJANGO_SECURE_SSL_REDIRECT=False
+    ```
+
+3.  **Build and Start Containers:**
+    ```bash
+    docker-compose up -d --build
+    ```
+    The API will be available at `http://localhost:8000/api/docs/`.
+
+---
+
+## 🧪 Testing
+
+The project includes a comprehensive automated test suite maintaining a **99% overall test coverage** across models, views, custom permissions, and validation logic.
+
+To run the test suite and check coverage inside the Docker container:
+```bash
+docker-compose exec web coverage run manage.py test
+docker-compose exec web coverage report

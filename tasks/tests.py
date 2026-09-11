@@ -4,9 +4,12 @@ from rest_framework import status
 from .models import Team, Task, Membership, Comment
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.test import override_settings
+from django.urls import reverse
 
 User = get_user_model()
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class TeamPermissionTests(APITestCase):
 
     def setUp(self):
@@ -120,7 +123,8 @@ class TeamPermissionTests(APITestCase):
         response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-    
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class TaskPermissionTests(APITestCase):
 
     def setUp(self):
@@ -292,6 +296,8 @@ class TaskPermissionTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class MembershipsPermissionTests(APITestCase):
     def setUp(self):
         cache.clear()
@@ -546,6 +552,8 @@ class MembershipsPermissionTests(APITestCase):
         self.assertIsNone(task1.assignee)
         self.assertIsNone(task2.assignee)
 
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class CommentPermissionTest(APITestCase):
     def setUp(self):
         cache.clear()
@@ -705,6 +713,8 @@ class CommentPermissionTest(APITestCase):
         self.comment_member.refresh_from_db()
         self.assertEqual(self.comment_member.body, "changed")
 
+
+@override_settings(SECURE_SSL_REDIRECT=False)
 class TransferOwnershipPermissionTest(APITestCase):
     def setUp(self):
         cache.clear()
@@ -798,8 +808,8 @@ from django.db import connection
 from django.contrib.auth import get_user_model
 from .models import Team, Task, Membership, Comment
 
-User = get_user_model()
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class PerformanceAndPaginationTests(APITestCase):
 
     def setUp(self):
@@ -893,7 +903,7 @@ class PerformanceAndPaginationTests(APITestCase):
         self.assertEqual(len(response.data['results']), 10)
         self.assertIsNotNone(response.data['next'])  
 
-
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ThrottlingTests(APITestCase):
 
     def setUp(self):
@@ -922,3 +932,48 @@ class ThrottlingTests(APITestCase):
                 self.client.post(url, {"new_owner": self.admin.pk})
         response = self.client.post(url, {"new_owner": self.admin.pk})
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+
+@override_settings(SECURE_SSL_REDIRECT=False)
+class RegisterViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse('register')
+
+    def test_register_success(self):
+        data = {
+            'username': 'newuser',
+            'email': 'newuser@example.com',
+            'password': 'StrongPass123!'
+        }
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(User.objects.filter(username='newuser').exists())
+
+    def test_password_is_hashed(self):
+        data = {'username': 'newuser2', 'email': 'a@b.com', 'password': 'StrongPass123!'}
+        self.client.post(self.url, data)
+        user = User.objects.get(username='newuser2')
+        self.assertNotEqual(user.password, 'StrongPass123!')
+        self.assertTrue(user.check_password('StrongPass123!'))
+
+    def test_duplicate_username_rejected(self):
+        User.objects.create_user(username='existing', password='pass12345')
+        data = {'username': 'existing', 'email': 'x@y.com', 'password': 'AnotherPass1!'}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_missing_password_rejected(self):
+        data = {'username': 'newuser3', 'email': 'a@b.com'}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_not_in_response(self):
+        data = {'username': 'newuser4', 'email': 'a@b.com', 'password': 'StrongPass123!'}
+        response = self.client.post(self.url, data)
+        self.assertNotIn('password', response.data)
+
+    def test_register_without_authentication(self):
+        data = {'username': 'newuser5', 'email': 'a@b.com', 'password': 'StrongPass123!'}
+        response = self.client.post(self.url, data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)

@@ -1,7 +1,7 @@
 from rest_framework.routers import DefaultRouter
 from django.urls import path, include
 from .views import (
-    TeamDetailAPIView, TeamListCreateView, TaskListCreateView, TaskDetailAPIView, 
+    RegisterView, TeamDetailAPIView, TeamListCreateView, TaskListCreateView, TaskDetailAPIView, 
     TeamTaskListCreateView, MembershipListCreateView, MembershipDetailAPIView,
     CommentListCreateView, CommentDetailAPIView, TransferOwnershipView
 )
@@ -34,4 +34,6 @@ urlpatterns = [
     path("comments/<int:pk>/", CommentDetailAPIView.as_view(), name="comment-detail"),
 
     path('teams/<int:pk>/transfer-ownership/', TransferOwnershipView.as_view(), name='transfer-ownership'),
+
+    path('register/', RegisterView.as_view(), name='register'),
 ]

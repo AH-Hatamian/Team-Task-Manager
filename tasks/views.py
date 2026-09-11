@@ -7,7 +7,7 @@ from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Team, Task
 from rest_framework.response import Response
-from .serializers import TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer, MembershipRoleUpdateSerializer
+from .serializers import RegisterSerializer, TaskSerializer, MembershipSerializer, TeamSerializer, CommentSerializer, MembershipRoleUpdateSerializer
 from .permissions import (
     TeamDetailPermission,
     TaskListPermission, TaskDetailPermission,
@@ -18,6 +18,8 @@ from .permissions import (
     TransferOwnershipPermission,
     TransferOwnershipThrottle
 )
+from django.contrib.auth import get_user_model
+from rest_framework.permissions import AllowAny
 
 class TeamListCreateView(generics.ListCreateAPIView):
     serializer_class = TeamSerializer
@@ -209,5 +211,10 @@ class TransferOwnershipView(APIView):
             status=status.HTTP_200_OK
         )
 
+User = get_user_model()
 
+class RegisterView(generics.CreateAPIView):
+    queryset = User.objects.all()
+    permission_classes = (AllowAny,)
+    serializer_class = RegisterSerializer
 

@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Team, Task, Membership, Comment
+from django.contrib.auth import get_user_model
 
 class TeamSerializer(serializers.ModelSerializer):
     member_count = serializers.IntegerField(source='member_count_annotated', read_only=True)
@@ -69,3 +70,21 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ["id", "task_title", "author_name", "body", "created_at"]
+
+
+User = get_user_model()
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password') 
+
+    def create(self, validated_data):
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data.get('email', ''),
+            password=validated_data['password']
+        )
+        return user
